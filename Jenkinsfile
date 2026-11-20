@@ -42,6 +42,15 @@ pipeline {
             }
         }
 
+        stage('Dependencias - pip-audit') {
+            steps {
+                script {
+                    def rc = bat(returnStatus: true, script: 'docker run --rm -v "%WORKSPACE%":/src -w /src python:3.11-slim sh -c "pip install -q pip-audit && pip-audit -r requirements.txt --desc -f markdown -o reports/pip-audit.md; rc=$?; cat reports/pip-audit.md; exit $rc"')
+                    if (rc != 0) { unstable("pip-audit encontro dependencias con vulnerabilidades (CVE)") }
+                }
+            }
+        }
+
         stage('Deploy') {
             steps {
                 bat 'docker network inspect %RED% >nul 2>&1 || docker network create %RED%'
