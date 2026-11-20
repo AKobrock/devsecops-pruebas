@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: devsecops
+    folder: DevSecOps
+    type: file
+    options:
+      path: /etc/grafana/provisioning/dashboards

@@ -12,7 +12,8 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo "Commit: ${env.GIT_COMMIT}  Build: ${env.BUILD_NUMBER}"
-                bat 'if not exist reports mkdir reports'
+                bat 'if exist reports rmdir /s /q reports'
+                bat 'mkdir reports'
             }
         }
 
@@ -45,7 +46,7 @@ pipeline {
         stage('Dependencias - pip-audit') {
             steps {
                 script {
-                    def rc = bat(returnStatus: true, script: 'docker run --rm -v "%WORKSPACE%":/src -w /src python:3.11-slim sh -c "pip install -q pip-audit && pip-audit -r requirements.txt --desc -f markdown -o reports/pip-audit.md; rc=$?; cat reports/pip-audit.md; exit $rc"')
+                    def rc = bat(returnStatus: true, script: 'docker run --rm -v "%WORKSPACE%":/src -w /src python:3.11-slim sh -c "pip install -q pip-audit && pip-audit -r requirements.txt --desc -f markdown -o reports/pip-audit.md; rc=$?; cat reports/pip-audit.md 2>/dev/null; exit $rc"')
                     if (rc != 0) { unstable("pip-audit encontro dependencias con vulnerabilidades (CVE)") }
                 }
             }
@@ -67,6 +68,13 @@ pipeline {
                     def rc = bat(returnStatus: true, script: 'docker run --rm --network %RED% -v "%WORKSPACE%\\reports":/zap/wrk:rw zaproxy/zap-stable zap-full-scan.py -t "http://%APP_NAME%:5000/hello?name=test" -m 1 -r zap_report.html -J zap_report.json')
                     if (rc != 0) { unstable("OWASP ZAP detecto alertas") }
                 }
+            }
+        }
+
+        stage('Monitoring') {
+            steps {
+                bat 'docker compose -f monitoring\\docker-compose.yml up -d'
+                echo 'Grafana: http://localhost:3000 (admin/admin)  Prometheus: http://localhost:9090'
             }
         }
     }

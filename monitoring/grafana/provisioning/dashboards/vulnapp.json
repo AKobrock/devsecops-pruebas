@@ -1,0 +1,39 @@
+{
+  "title": "Monitoreo de Seguridad - vulnapp",
+  "uid": "devsecops-vulnapp",
+  "schemaVersion": 39,
+  "refresh": "5s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Estado de la aplicacion (1 = arriba, 0 = caida)",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "refId": "A", "expr": "up{job=\"vulnapp\"}" } ]
+    },
+    {
+      "id": 2, "type": "stat", "title": "Peticiones totales",
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "refId": "A", "expr": "sum(app_http_requests_total)" } ]
+    },
+    {
+      "id": 3, "type": "stat", "title": "Peticiones rechazadas (4xx) ultimo minuto",
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "refId": "A", "expr": "sum(increase(app_http_requests_total{status=~\"4..\"}[1m])) or vector(0)" } ]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "Peticiones por segundo por codigo HTTP",
+      "gridPos": { "x": 0, "y": 5, "w": 24, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "refId": "A", "expr": "sum by (status) (rate(app_http_requests_total[1m]))", "legendFormat": "HTTP {{status}}" } ]
+    },
+    {
+      "id": 5, "type": "table", "title": "Alertas de seguridad activas",
+      "gridPos": { "x": 0, "y": 14, "w": 24, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "refId": "A", "expr": "ALERTS{alertstate=\"firing\"}", "format": "table", "instant": true } ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+groups:
+  - name: seguridad-app
+    rules:
+      - alert: AplicacionCaida
+        expr: up{job="vulnapp"} == 0
+        for: 30s
+        labels: {severity: critical}
+        annotations:
+          summary: "La aplicacion vulnapp no responde"
+
+      - alert: PosibleAtaqueEntradasInvalidas
+        expr: sum(increase(app_http_requests_total{status=~"4.."}[1m])) > 20
+        labels: {severity: warning}
+        annotations:
+          summary: "Muchas peticiones rechazadas (4xx) en 1 minuto: posible ataque o escaneo"
+
+      - alert: ErroresServidor
+        expr: sum(increase(app_http_requests_total{status=~"5.."}[1m])) > 0
+        labels: {severity: critical}
+        annotations:
+          summary: "La aplicacion devuelve errores 5xx"

@@ -40,7 +40,8 @@ def cabeceras_seguridad(resp):
         ruta = request.path if request.path == '/hello' else 'otra'
         CONTADOR[(ruta, resp.status_code)] += 1
     # [3] Cabeceras de seguridad (las que reporto OWASP ZAP)
-    resp.headers['Content-Security-Policy'] = "default-src 'none'; frame-ancestors 'none'"
+    resp.headers['Content-Security-Policy'] = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+    resp.headers['Cross-Origin-Embedder-Policy'] = 'require-corp'
     resp.headers['X-Content-Type-Options'] = 'nosniff'
     resp.headers['X-Frame-Options'] = 'DENY'
     resp.headers['Referrer-Policy'] = 'no-referrer'
