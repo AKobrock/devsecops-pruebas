@@ -51,6 +51,15 @@ pipeline {
                 bat 'curl -s "http://localhost:5000/hello?name=TEST"'
             }
         }
+
+        stage('DAST - OWASP ZAP') {
+            steps {
+                script {
+                    def rc = bat(returnStatus: true, script: 'docker run --rm --network %RED% -v "%WORKSPACE%\\reports":/zap/wrk:rw zaproxy/zap-stable zap-full-scan.py -t "http://%APP_NAME%:5000/hello?name=test" -m 1 -r zap_report.html -J zap_report.json')
+                    if (rc != 0) { unstable("OWASP ZAP detecto alertas") }
+                }
+            }
+        }
     }
 
     post {
