@@ -1,0 +1,61 @@
+pipeline {
+    agent any
+
+    environment {
+        PATH      = "C:\\Users\\askok\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin;${env.PATH}"
+        APP_IMAGE = "vulnapp"
+        APP_NAME  = "vulnapp"
+        RED       = "devsecops"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo "Commit: ${env.GIT_COMMIT}  Build: ${env.BUILD_NUMBER}"
+                bat 'if not exist reports mkdir reports'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                bat 'docker build -t %APP_IMAGE%:%BUILD_NUMBER% -t %APP_IMAGE%:latest .'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                    bat 'docker run --rm -v "%WORKSPACE%":/src -w /src python:3.11-slim sh -c "pip install -q -r requirements.txt pytest && pytest -v -p no:cacheprovider --junitxml=reports/pytest.xml test_app.py"'
+                }
+            }
+            post {
+                always { junit allowEmptyResults: true, testResults: 'reports/pytest.xml' }
+            }
+        }
+
+        stage('SAST - Bandit') {
+            steps {
+                script {
+                    def rc = bat(returnStatus: true, script: 'docker run --rm -v "%WORKSPACE%":/src -w /src python:3.11-slim sh -c "pip install -q bandit && bandit app.py -f html -o reports/bandit.html; bandit app.py"')
+                    if (rc != 0) { unstable("Bandit encontro problemas de seguridad") }
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                bat 'docker network inspect %RED% >nul 2>&1 || docker network create %RED%'
+                bat 'docker rm -f %APP_NAME% >nul 2>&1 & exit /b 0'
+                bat 'docker run -d --name %APP_NAME% --network %RED% -p 5000:5000 %APP_IMAGE%:latest'
+                bat 'ping -n 6 127.0.0.1 >nul'
+                bat 'curl -s "http://localhost:5000/hello?name=TEST"'
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'reports/**', allowEmptyArchive: true, fingerprint: true
+        }
+    }
+}
